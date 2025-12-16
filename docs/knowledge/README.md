@@ -18,13 +18,20 @@
    - 查询需求分析
    - 正确的数据结构设计
 
+3. [Instant Query 的 Lookback Delta 策略](./03-instant-query-lookback.md)
+   - 即时查询的核心问题
+   - Lookback Delta 回溯窗口策略
+   - 方案对比和选择
+   - Prometheus 标准实现
+
 ## 📖 阅读顺序
 
 如果你是第一次阅读，建议按以下顺序：
 
 1. 先阅读 [DESIGN.md](../DESIGN.md) 了解整体设计
 2. 阅读数据模型相关的知识点（01, 02）
-3. 后续根据开发进度阅读其他主题
+3. 阅读查询相关的知识点（03）
+4. 后续根据开发进度阅读其他主题
 
 ## 🏷️ 主题分类
 
@@ -36,7 +43,7 @@
 - 待补充...
 
 ### 查询引擎（Query Engine）
-- 待补充...
+- [03-instant-query-lookback.md](./03-instant-query-lookback.md)
 
 ### 数据抓取（Scraping）
 - 待补充...
@@ -61,6 +68,9 @@
 
 ## 🔄 更新日志
 
+- 2024-12-16: 添加查询引擎相关文档
+  - 添加 Instant Query Lookback Delta 策略文档
+  
 - 2024-12-13: 创建知识点文档目录
   - 添加 timestamp 设计文档
   - 添加 Series-Sample 关系文档
