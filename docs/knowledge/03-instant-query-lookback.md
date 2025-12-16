@@ -49,17 +49,17 @@ Prometheus 使用**回溯时间窗口（Lookback Delta）**策略：在查询时
   - 1702450800000 (10:00:00) ✅ 在范围内
   - 1702450815000 (10:00:15) ✅ 在范围内，更新
   - 1702450830000 (10:00:30) ❌ 超出查询时间点
-  
+
 返回: {Timestamp: 1702450815000, Value: 15}
 ```
 
 ### 关键参数
 
-| 参数 | 默认值 | 说明 |
-|------|--------|------|
-| Lookback Delta | 5 分钟 | 默认回溯时间窗口 |
-| 范围 | `[T - 5m, T]` | 查找范围 |
-| 选择策略 | 最新样本 | 如果有多个样本，返回最接近 T 的 |
+| 参数           | 默认值        | 说明                            |
+| -------------- | ------------- | ------------------------------- |
+| Lookback Delta | 5 分钟        | 默认回溯时间窗口                |
+| 范围           | `[T - 5m, T]` | 查找范围                        |
+| 选择策略       | 最新样本      | 如果有多个样本，返回最接近 T 的 |
 
 ---
 
@@ -80,8 +80,9 @@ func Query(metric *Metric, timestamp int64) (*Sample, error) {
 ```
 
 **问题**：
+
 - ❌ 几乎永远找不到匹配的样本
-- ❌ 只有 1/15000 的概率能精确匹配（15秒 = 15000毫秒）
+- ❌ 只有 1/15000 的概率能精确匹配（15 秒 = 15000 毫秒）
 
 **适用场景**：无
 
@@ -93,7 +94,7 @@ func Query(metric *Metric, timestamp int64) (*Sample, error) {
 func Query(metric *Metric, timestamp int64) (*Sample, error) {
     var closest *Sample
     minDiff := int64(math.MaxInt64)
-    
+
     for _, s := range samples {
         diff := abs(s.Timestamp - timestamp)
         if diff < minDiff {
@@ -101,20 +102,23 @@ func Query(metric *Metric, timestamp int64) (*Sample, error) {
             closest = &s
         }
     }
-    
+
     return closest, nil
 }
 ```
 
 **优点**：
+
 - ✅ 总能找到样本
 - ✅ 实现简单
 
 **问题**：
+
 - ❌ **数据时效性无保障**：即使最近的样本在 1 小时前，也会返回
 - ❌ 可能返回过时的数据
 
 **示例问题**：
+
 ```go
 // 服务在 10:00 宕机，最后一个样本是 09:59:45
 // 用户在 11:00 查询当前值
@@ -137,10 +141,10 @@ func Query(metric *Metric, timestamp int64) (*Sample, error) {
 func QueryWithLookback(metric *Metric, timestamp, lookback int64) (*Sample, error) {
     // 在 [timestamp - lookback, timestamp] 范围内
     // 查找最新的样本
-    
+
     minTime := timestamp - lookback
     maxTime := timestamp
-    
+
     var result *Sample
     for _, s := range samples {
         if s.Timestamp >= minTime && s.Timestamp <= maxTime {
@@ -149,25 +153,28 @@ func QueryWithLookback(metric *Metric, timestamp, lookback int64) (*Sample, erro
             }
         }
     }
-    
+
     if result == nil {
         return nil, ErrNoDataInRange
     }
-    
+
     return result, nil
 }
 ```
 
 **优点**：
+
 - ✅ **符合监控场景语义**：数据有时效性
 - ✅ **可配置容忍度**：可以根据采样间隔调整 lookback
 - ✅ **平衡性好**：既能找到数据，又不会返回过时数据
 - ✅ **Prometheus 标准做法**
 
 **缺点**：
+
 - ⚠️ 如果 lookback 设置不当，可能找不到数据
 
 **适用场景**：
+
 - ✅ 监控系统（数据有时效性要求）
 - ✅ 时序数据查询
 - ✅ 需要平衡"找到数据"和"数据新鲜度"的场景
@@ -180,31 +187,34 @@ func QueryWithLookback(metric *Metric, timestamp, lookback int64) (*Sample, erro
 func Query(metric *Metric, timestamp int64) (*Sample, error) {
     // 将即时查询转换为小范围的 range 查询
     lookback := 5 * 60 * 1000  // 5 分钟
-    
+
     series, err := QueryRange(metric, timestamp-lookback, timestamp)
     if err != nil {
         return nil, err
     }
-    
+
     // 从返回的样本中取最后一个（最新的）
     if len(series.Samples) == 0 {
         return nil, ErrNoDataInRange
     }
-    
+
     lastSample := series.Samples[len(series.Samples)-1]
     return &lastSample, nil
 }
 ```
 
 **优点**：
+
 - ✅ 复用 QueryRange 的逻辑
 - ✅ 减少代码重复
 
 **缺点**：
+
 - ⚠️ 返回整个 Series 再取最后一个，略有浪费
 - ⚠️ 如果范围内有很多样本，性能稍差
 
 **适用场景**：
+
 - 快速原型开发
 - 代码简化优先的场景
 
@@ -232,17 +242,17 @@ func (ms *MemoryStorage) Query(m *model.Metric, timestamp int64) (model.Series, 
 func (ms *MemoryStorage) queryWithLookback(m *model.Metric, timestamp, lookback int64) (model.Series, error) {
     ms.mutex.RLock()
     defer ms.mutex.RUnlock()
-    
+
     fp := m.Fingerprint()
     series, ok := ms.series[fp]
     if !ok {
         return model.Series{}, ErrSeriesNotFound
     }
-    
+
     // 计算查找范围
     minTime := timestamp - lookback
     maxTime := timestamp
-    
+
     // 在范围内查找最新的样本
     var result *model.Sample
     for i := range series.Samples {
@@ -253,12 +263,12 @@ func (ms *MemoryStorage) queryWithLookback(m *model.Metric, timestamp, lookback 
             }
         }
     }
-    
+
     // 没找到数据，返回空 Samples（不是错误）
     if result == nil {
         return model.Series{Metric: series.Metric}, nil
     }
-    
+
     // 找到数据，返回包含单个样本的 Series
     return model.Series{
         Metric:  series.Metric,
@@ -273,20 +283,20 @@ func (ms *MemoryStorage) queryWithLookback(m *model.Metric, timestamp, lookback 
 func TestMemoryStorage_Query_Lookback(t *testing.T) {
     storage := NewMemoryStorage()
     metric := createTestMetric("requests", "endpoint", "/api")
-    
+
     now := time.Now()
-    
+
     // 插入 3 个样本（过去 3 分钟内）
     samples := []*model.Sample{
         {Timestamp: now.Add(-3 * time.Minute).UnixMilli(), Value: 100},
         {Timestamp: now.Add(-2 * time.Minute).UnixMilli(), Value: 200},
         {Timestamp: now.Add(-1 * time.Minute).UnixMilli(), Value: 300},
     }
-    
+
     for _, s := range samples {
         storage.Append(metric, s)
     }
-    
+
     // 测试 1: 查询当前时间，应该返回最新的样本（1分钟前）
     series, err := storage.Query(metric, now.UnixMilli())
     if err != nil {
@@ -298,7 +308,7 @@ func TestMemoryStorage_Query_Lookback(t *testing.T) {
     if series.Samples[0].Value != 300 {
         t.Errorf("期望返回最新样本（值 300），实际值 %f", series.Samples[0].Value)
     }
-    
+
     // 测试 2: 查询 10 分钟前的数据（超出 lookback 范围）
     series, err = storage.Query(metric, now.Add(-10*time.Minute).UnixMilli())
     if err != nil {
@@ -362,8 +372,8 @@ metric1 := &Metric{Name: "fast_metric", ...}
 metric2 := &Metric{Name: "backup_status", ...}
 // 需要更长的 lookback（如 2 小时）
 series, err := storage.QueryWithLookback(
-    metric2, 
-    time.Now().UnixMilli(), 
+    metric2,
+    time.Now().UnixMilli(),
     2 * 60 * 60 * 1000,  // 2 小时
 )
 ```
@@ -388,7 +398,7 @@ Lookback 窗口 [11:05, 11:10]:
 10:00   10:15   10:30   10:45   11:00   11:15   11:30
                                   ↓       ↓       ↓
                                  S4      [窗口]   Q
-                                         
+
 结果：返回 S4（11:00 的样本）
       因为它在窗口内且最接近 Q
 
@@ -407,8 +417,8 @@ Lookback 窗口 [11:05, 11:10]:
 
 ### 1. 为什么默认 5 分钟？
 
-- **平衡性**：对于大多数监控场景（15-60秒采样间隔），5分钟足够宽容
-- **时效性**：5分钟内的数据还有参考价值
+- **平衡性**：对于大多数监控场景（15-60 秒采样间隔），5 分钟足够宽容
+- **时效性**：5 分钟内的数据还有参考价值
 - **Prometheus 标准**：与 Prometheus 保持一致
 
 ### 2. 为什么返回 Series 而不是 Sample？
@@ -432,6 +442,7 @@ if result == nil {
 ```
 
 **原因**：
+
 - ✅ "时间范围内没数据"是**正常情况**，不是错误
 - ✅ Series 不存在才是错误（ErrSeriesNotFound）
 - ✅ 调用者可以根据 `len(Samples)` 判断，更灵活
@@ -455,6 +466,7 @@ for i := range series.Samples {
 ```
 
 **适用场景**：
+
 - 内存存储
 - 样本数量 < 10000
 
@@ -469,18 +481,19 @@ func binarySearchLookback(samples []Sample, minTime, maxTime int64) *Sample {
     left := sort.Search(len(samples), func(i int) bool {
         return samples[i].Timestamp >= minTime
     })
-    
+
     // 2. 从该位置向后查找，直到超出 maxTime
     var result *Sample
     for i := left; i < len(samples) && samples[i].Timestamp <= maxTime; i++ {
         result = &samples[i]  // 持续更新，最后一个就是最新的
     }
-    
+
     return result
 }
 ```
 
 **优化效果**：
+
 - 1000 个样本：10 次比较 vs 1000 次比较
 - 100 万个样本：20 次比较 vs 100 万次比较
 
@@ -488,15 +501,15 @@ func binarySearchLookback(samples []Sample, minTime, maxTime int64) *Sample {
 
 ## 总结
 
-| 方面 | 说明 |
-|------|------|
-| **核心问题** | 查询时间戳和样本时间戳不会完全匹配 |
-| **解决方案** | Lookback Delta（回溯时间窗口） |
-| **默认窗口** | 5 分钟 |
-| **查找逻辑** | 在 [T - lookback, T] 范围内找最新样本 |
-| **返回类型** | Series（包含 0 或 1 个样本） |
-| **空数据处理** | 返回空 Samples，不是错误 |
-| **性能** | Phase 1 线性扫描，Phase 4+ 二分查找 |
+| 方面           | 说明                                  |
+| -------------- | ------------------------------------- |
+| **核心问题**   | 查询时间戳和样本时间戳不会完全匹配    |
+| **解决方案**   | Lookback Delta（回溯时间窗口）        |
+| **默认窗口**   | 5 分钟                                |
+| **查找逻辑**   | 在 [T - lookback, T] 范围内找最新样本 |
+| **返回类型**   | Series（包含 0 或 1 个样本）          |
+| **空数据处理** | 返回空 Samples，不是错误              |
+| **性能**       | Phase 1 线性扫描，Phase 4+ 二分查找   |
 
 ### 关键要点
 
@@ -517,4 +530,3 @@ func binarySearchLookback(samples []Sample, minTime, maxTime int64) *Sample {
 ---
 
 **注**：本设计基于 Prometheus 2.x 的行为，是监控系统的标准做法。
-
