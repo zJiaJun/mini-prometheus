@@ -1,0 +1,24 @@
+global:
+  scrape_interval: 15s
+  scrape_timeout: 10s
+  evaluation_interval: 60s
+  external_labels:
+    env: "prod"
+    cluster: "test-cluster"
+
+scrape_configs:
+  - job_name: "my-app"
+    scrape_interval: 15s
+    scrape_timeout: 10s
+    metrics_path: /metrics
+    static_configs:
+      - targets:
+          - "localhost:8080"
+          - "localhost:8081"
+        labels:
+          team: "backend"
+      - targets:
+          - "localhost:9090"
+        labels:
+          team: "monitoring"
+
