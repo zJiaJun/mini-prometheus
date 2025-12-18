@@ -1,4 +1,4 @@
-package prometheus
+package main
 
 func main() {
 
