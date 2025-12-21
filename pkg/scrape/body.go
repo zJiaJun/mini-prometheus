@@ -1,17 +1,17 @@
 package scrape
 
 type Body struct {
-	jobName   string
-	targetUrl string
-	data      []byte
-	labels    map[string]string
+	JobName   string
+	TargetUrl string
+	Data      []byte
+	Labels    map[string]string
 }
 
 func NewBody(jobName string, targetUrl string, data []byte, labels map[string]string) *Body {
 	return &Body{
-		jobName:   jobName,
-		targetUrl: targetUrl,
-		data:      data,
-		labels:    labels,
+		JobName:   jobName,
+		TargetUrl: targetUrl,
+		Data:      data,
+		Labels:    labels,
 	}
 }

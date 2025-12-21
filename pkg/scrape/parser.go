@@ -52,8 +52,8 @@ func (p *Parser) consume() {
 
 func (p *Parser) stop() {
 	p.cancel()
-	p.wg.Wait()
 	close(p.ch)
+	p.wg.Wait()
 	return
 }
 
