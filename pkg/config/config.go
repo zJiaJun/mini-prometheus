@@ -79,7 +79,7 @@ func (c *Config) Process() map[string]ScrapeConfig {
 		globalTimeout = DefaultScrapeTimeout
 	}
 	globalLabels := c.Global.ExternalLabels
-	hasGlobalLabels := globalLabels != nil && len(globalLabels) > 0
+	hasGlobalLabels := len(globalLabels) > 0
 	result := make(map[string]ScrapeConfig, len(c.ScrapeConfigs))
 	for i := range c.ScrapeConfigs {
 		osc := c.ScrapeConfigs[i]
